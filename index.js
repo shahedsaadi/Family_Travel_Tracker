@@ -34,7 +34,7 @@ let users = [
   { id: 2, name: "Jack", color: "powderblue" },
 ];
 
-async function checkVisisted() {
+async function checkVisited() {
   const result = await db.query(  //many : 1 relatioship,     PK = FK
     "SELECT country_code FROM visited_countries JOIN users ON users.id = user_id WHERE user_id = $1;" ,
     [currentUserId]
@@ -55,7 +55,7 @@ async function getCurrentUser(){
 
 // GET home page
 app.get("/", async (req, res) => {
-  const countries = await checkVisisted();
+  const countries = await checkVisited();
   const currentUser = await getCurrentUser();
 
   res.render("index.ejs", {
@@ -67,46 +67,54 @@ app.get("/", async (req, res) => {
 });
 
 app.post("/add", async (req, res) => {
-  const input = req.body["country"];  // for examble "France"
-  const currentUser = await getCurrentUser();  //get hold of the current user.
+  const input = req.body["country"];
+  const currentUser = await getCurrentUser(currentUserId);
 
   try {
-    const result = await db.query(    //we want to use that input to make a query to our DB
+    const result = await db.query(
       "SELECT country_code FROM countries WHERE LOWER(country_name) LIKE '%' || $1 || '%';",
       [input.toLowerCase()]
     );
 
-    const data = result.rows[0];
-    const countryCode = data.country_code;
+    if (result.rows.length === 0) {
+      throw new Error("Country not found");
+    }
+
+    const countryCode = result.rows[0].country_code;
+
     try {
       await db.query(
         "INSERT INTO visited_countries (country_code, user_id) VALUES ($1, $2)",
         [countryCode, currentUserId]
       );
       res.redirect("/");
-    } catch (err){
-      // console.log(err);
-      const countries = await checkVisisted();
-      res.render("index.ejs", {
-       countries: countries,
-       total: countries.length,
-       users: users,
-       color: currentUser.color,
-       error:"Country has already been added, try again.",
-      });
+    } catch (err) {
+      if (err.code === '23505') {  // Unique violation error code in PostgreSQL
+        const countries = await checkVisited(currentUserId);
+        res.render("index.ejs", {
+          countries: countries,
+          total: countries.length,
+          users: users,
+          color: currentUser.color,
+          error: "Country has already been added, try again.",
+        });
+      } else {
+        console.error("Database error:", err);
+        res.status(500).send("Internal server error");
+      }
     }
-  } catch(err){
-      // console.log(err);
-      const countries = await checkVisisted();
-      res.render("index.ejs", {
-        countries: countries,
-        total: countries.length,
-        users: users,
-        color: currentUser.color,
-        error: "Country name does not exist, try again.",
-       });
-    }
+  } catch (err) {
+    const countries = await checkVisited(currentUserId);
+    res.render("index.ejs", {
+      countries: countries,
+      total: countries.length,
+      users: users,
+      color: currentUser.color,
+      error: "Country name does not exist, try again.",
+    });
+  }
 });
+
 
 app.post("/user", async (req, res) => {
   if(req.body.add === "new"){  //user hits the (Add Family Member) button.
