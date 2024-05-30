@@ -6,10 +6,11 @@ name VARCHAR(15) UNIQUE NOT NULL,
 color VARCHAR(15)
 );
 
-CREATE TABLE visited_countries(
-id SERIAL PRIMARY KEY,
-country_code CHAR(2) NOT NULL,
-user_id INTEGER REFERENCES users(id)
+CREATE TABLE visited_countries (
+  id SERIAL PRIMARY KEY,
+  country_code CHAR(2) NOT NULL,
+  user_id INTEGER REFERENCES users(id),
+  UNIQUE (country_code, user_id)  -- Ensures unique country per user
 );
 
 INSERT INTO users (name, color)
@@ -31,4 +32,4 @@ country_code CHAR(2),
 country_name VARCHAR(100)
 );
 
--- after creating "countries" table, to insert data to it =>import the data from "countries.csv"file that contains countries (name,code)
+-- After creating "countries" table, to insert data to it =>import the data from "countries.csv"file that contains countries (id,country_code,country_name)

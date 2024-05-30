@@ -67,11 +67,11 @@ app.get("/", async (req, res) => {
 });
 
 app.post("/add", async (req, res) => {
-  const input = req.body["country"];
-  const currentUser = await getCurrentUser(currentUserId);
+  const input = req.body["country"];  // for examble "France"
+  const currentUser = await getCurrentUser(currentUserId); //get hold of the current user.
 
   try {
-    const result = await db.query(
+    const result = await db.query(    //we want to use that input to make a query 
       "SELECT country_code FROM countries WHERE LOWER(country_name) LIKE '%' || $1 || '%';",
       [input.toLowerCase()]
     );
@@ -104,6 +104,7 @@ app.post("/add", async (req, res) => {
       }
     }
   } catch (err) {
+    // Handling country not found error
     const countries = await checkVisited(currentUserId);
     res.render("index.ejs", {
       countries: countries,
